@@ -1,27 +1,64 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  useWindowDimensions,
+  ActivityIndicator,
+  Linking,
+  Platform,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Download, FileCode, BookOpen, Table, Film, ShieldAlert, Sparkles, CheckCircle, Package } from 'lucide-react-native';
+import {
+  Download,
+  FileCode,
+  BookOpen,
+  Table,
+  Film,
+  ShieldAlert,
+  Sparkles,
+  CheckCircle,
+  Package,
+  ExternalLink,
+  KeyRound,
+  Server,
+} from 'lucide-react-native';
 import { Container } from '../src/components/layout/Container';
 import { Badge } from '../src/components/ui/Badge';
 import { Card } from '../src/components/ui/Card';
 import { theme } from '../src/styles/theme';
-import { paymentVerification } from '../src/services/payments/paymentVerificationService';
-import { ordersClient } from '../src/services/orders/ordersClient';
 import { clientEnv } from '../src/config/env';
+import { paymentVerification } from '../src/services/payments/paymentVerificationService';
+import { ordersClient, OrderDetailsResponse } from '../src/services/orders/ordersClient';
 
 export default function DownloadPage() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ token?: string }>();
+  const params = useLocalSearchParams<{ token?: string; email?: string }>();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [orderDetails, setOrderDetails] = useState<OrderDetailsResponse | null>(null);
 
   const token = params.token;
   const verification = paymentVerification.verifyToken(token);
   // Es válido si el servicio local lo verificó o si es un token oficial emitido por la API
   const isTokenValid = verification.isValid || (Boolean(token) && String(token).length >= 10);
+
+  useEffect(() => {
+    let active = true;
+    if (token && isTokenValid) {
+      ordersClient.getOrderDetails(token).then((details) => {
+        if (active && details) {
+          setOrderDetails(details);
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [token, isTokenValid]);
 
   if (!token || !isTokenValid) {
     return (
@@ -32,7 +69,7 @@ export default function DownloadPage() {
             <Text style={styles.lockTitle}>Área Restringida a Clientes Verificados</Text>
             <Text style={styles.lockDesc}>
               {verification.errorReason ||
-                'Para acceder a los archivos descargables de TurnoFlow AI debés contar con una compra validada mediante token seguro.'}
+                'Para acceder a los archivos descargables y al Panel Cloud de TurnoFlow AI debés contar con una compra validada mediante token seguro.'}
             </Text>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -48,8 +85,33 @@ export default function DownloadPage() {
   }
 
   const order = verification.order;
-  const customerEmail = order?.customerEmail || 'Cliente Verificado';
-  const orderId = order?.orderId || `TF-${token.substring(0, 8).toUpperCase()}`;
+  const customerEmail =
+    orderDetails?.saasCredentials?.email ||
+    orderDetails?.customerEmail ||
+    params.email ||
+    order?.customerEmail ||
+    'cliente@turnoflow.ai';
+
+  const temporaryPassword =
+    orderDetails?.saasCredentials?.temporaryPassword ||
+    order?.saasCredentials?.temporaryPassword ||
+    'TurnoFlow2026!';
+
+  const dashboardLoginUrl =
+    orderDetails?.saasCredentials?.dashboardUrl ||
+    order?.saasCredentials?.dashboardUrl ||
+    `${clientEnv.dashboardUrl.replace(/\/+$/, '')}/login`;
+
+  const orderId =
+    orderDetails?.orderId || order?.orderId || `TF-${token.substring(0, 8).toUpperCase()}`;
+
+  const handleOpenDashboard = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(dashboardLoginUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      Linking.openURL(dashboardLoginUrl);
+    }
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -65,29 +127,43 @@ export default function DownloadPage() {
     }
   };
 
-  const files = [
+  const handleIndividualDownload = (assetKey: 'blueprints' | 'manual' | 'prompts' | 'matrix') => {
+    ordersClient.downloadIndividualAsset(assetKey);
+  };
+
+  const files: {
+    assetKey: 'blueprints' | 'manual' | 'prompts' | 'matrix';
+    title: string;
+    desc: string;
+    size: string;
+    icon: React.ReactNode;
+  }[] = [
     {
-      title: 'Paquete Completo de Flujos JSON (Blueprints)',
-      desc: 'Flujos de atención 24/7, calificación de clientas y confirmación de turnos.',
-      size: '1.4 MB • ZIP / JSON',
+      assetKey: 'blueprints',
+      title: 'Paquete Completo de Flujos JSON (Blueprints n8n)',
+      desc: 'Flujos de atención 24/7, calificación de clientas y confirmación de turnos en Google Calendar.',
+      size: '1.4 MB • JSON / n8n Workflow',
       icon: <FileCode size={22} color={theme.colors.accent} />,
     },
     {
+      assetKey: 'manual',
       title: 'Manual de WhatsApp Cloud API Oficial',
       desc: 'Guía paso a paso para configurar tu número oficial en Meta sin intermediarios.',
-      size: '3.8 MB • PDF Interactivo',
+      size: '3.8 MB • Guía Técnica',
       icon: <BookOpen size={22} color={theme.colors.accent} />,
     },
     {
-      title: 'System Prompts & Reglas de Negocio',
-      desc: 'Textos y directrices de seguridad para el agente inteligente en formato Markdown y TXT.',
-      size: '420 KB • Documentos de texto',
+      assetKey: 'prompts',
+      title: 'System Prompts de los 5 Agentes IA',
+      desc: 'Prompts blindados para Recepcionista, Reservas, Clasificador, Seguimiento y Supervisor.',
+      size: '420 KB • Markdown (.md)',
       icon: <Sparkles size={22} color={theme.colors.accent} />,
     },
     {
-      title: 'Matriz de Seguimiento y Calificación',
-      desc: 'Plantilla de control de clientas interesadas y cálculo de conversión.',
-      size: '850 KB • Excel / Google Sheets',
+      assetKey: 'matrix',
+      title: 'Matriz de Seguimiento y 15 Respuestas Comerciales',
+      desc: 'Plantilla de control de clientas interesadas, guiones y cálculo de conversión.',
+      size: '850 KB • CSV / Excel',
       icon: <Table size={22} color={theme.colors.accent} />,
     },
   ];
@@ -98,27 +174,83 @@ export default function DownloadPage() {
         {/* Header */}
         <View style={styles.header}>
           <Badge
-            label="Centro de Descargas Digitales Verificado"
+            label="Centro de Entrega Dual Verificado (SaaS + Kit .ZIP)"
             variant="emerald"
             icon={<Sparkles size={13} color="#065F46" />}
           />
           <Text style={[styles.mainTitle, !isDesktop && styles.mainTitleMobile]}>
-            Tus archivos de TurnoFlow AI están listos
+            Tu Panel Cloud y tus archivos están listos
           </Text>
           <Text style={styles.subtitle}>
-            Licencia: **{customerEmail}** • Orden: **{orderId}** • Token: `{token.substring(0, 12)}...`
+            Licencia: <Text style={styles.subtitleBold}>{customerEmail}</Text> • Orden:{' '}
+            <Text style={styles.subtitleBold}>{orderId}</Text> • Token: `{token.substring(0, 12)}...`
           </Text>
         </View>
 
-        {/* Primary Master Download Banner */}
+        {/* ENTREGABLE 1: Acceso Instantáneo al Panel Cloud (SaaS Multi-Tenant) */}
+        <View style={styles.saasBannerCard}>
+          <View style={styles.saasBannerTop}>
+            <View style={styles.saasIconWrapper}>
+              <Server size={26} color="#FFFFFF" />
+            </View>
+            <View style={styles.saasHeaderInfo}>
+              <View style={styles.pillRow}>
+                <View style={styles.deliverablePill}>
+                  <Text style={styles.deliverablePillText}>ENTREGABLE #1 • SAAS MULTI-TENANT</Text>
+                </View>
+              </View>
+              <Text style={styles.saasBannerTitle}>
+                Acceso Instantáneo a tu Panel Cloud
+              </Text>
+              <Text style={styles.saasBannerDesc}>
+                Ingresá ahora mismo a tu panel administrativo en la nube para gestionar tus turnos, conversaciones de WhatsApp y configuración de IA:
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={handleOpenDashboard}
+              style={styles.saasAccessButton}
+            >
+              <Text style={styles.saasAccessButtonText}>Ingresar a mi Panel de Control ↗</Text>
+              <ExternalLink size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.saasCredentialsGrid, !isDesktop && styles.saasCredentialsGridMobile]}>
+            <View style={styles.credBoxItem}>
+              <Text style={styles.credBoxLabel}>URL DEL PANEL ADMINISTRATIVO</Text>
+              <Text style={styles.credBoxUrl}>{dashboardLoginUrl}</Text>
+            </View>
+            <View style={styles.credBoxItem}>
+              <Text style={styles.credBoxLabel}>USUARIO / EMAIL DEL COMPRADOR</Text>
+              <Text style={styles.credBoxValue}>{customerEmail}</Text>
+            </View>
+            <View style={styles.credBoxItem}>
+              <Text style={styles.credBoxLabel}>CONTRASEÑA TEMPORAL</Text>
+              <View style={styles.passwordTag}>
+                <KeyRound size={13} color="#065F46" />
+                <Text style={styles.passwordTagText}>{temporaryPassword}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ENTREGABLE 2: Primary Master Download Banner */}
         <View style={styles.masterDownloadCard}>
           <View style={styles.masterIconWrapper}>
             <Package size={28} color="#FFFFFF" />
           </View>
           <View style={styles.masterContent}>
+            <View style={styles.pillRow}>
+              <View style={styles.deliverablePillIndigo}>
+                <Text style={styles.deliverablePillIndigoText}>
+                  ENTREGABLE #2 • KIT AUTO-HOSPEDADO (.ZIP)
+                </Text>
+              </View>
+            </View>
             <Text style={styles.masterTitle}>TurnoFlow-AI-Complete.zip</Text>
             <Text style={styles.masterDesc}>
-              Incluye todos los flujos de automatización, prompts del agente, manual de WhatsApp Cloud API oficial y matrices de seguimiento.
+              Paquete completo descargable desde `/api/orders/verify-download/{token.substring(0, 8)}...` con todos los flujos de n8n, system prompts de los 5 agentes, manual de WhatsApp Cloud API y 13 guías de implementación.
             </Text>
             {downloadSuccess && (
               <View style={styles.successBanner}>
@@ -154,12 +286,11 @@ export default function DownloadPage() {
               <Text style={styles.fileSize}>{file.size}</Text>
               <TouchableOpacity
                 activeOpacity={0.85}
-                disabled={downloading}
-                onPress={handleDownload}
+                onPress={() => handleIndividualDownload(file.assetKey)}
                 style={styles.downloadBtn}
               >
                 <Download size={16} color="#FFFFFF" />
-                <Text style={styles.downloadBtnText}>Descargar archivo</Text>
+                <Text style={styles.downloadBtnText}>Descargar recurso individual</Text>
               </TouchableOpacity>
             </Card>
           ))}
@@ -177,19 +308,27 @@ export default function DownloadPage() {
           <View style={styles.moduleList}>
             <View style={styles.moduleItem}>
               <CheckCircle size={16} color={theme.colors.accent} />
-              <Text style={styles.moduleText}>Módulo 1: Alta de número en Meta WhatsApp Cloud API (18 min)</Text>
+              <Text style={styles.moduleText}>
+                Módulo 1: Alta de número en Meta WhatsApp Cloud API (18 min)
+              </Text>
             </View>
             <View style={styles.moduleItem}>
               <CheckCircle size={16} color={theme.colors.accent} />
-              <Text style={styles.moduleText}>Módulo 2: Importación de flujos JSON y webhook (24 min)</Text>
+              <Text style={styles.moduleText}>
+                Módulo 2: Importación de flujos JSON y webhook (24 min)
+              </Text>
             </View>
             <View style={styles.moduleItem}>
               <CheckCircle size={16} color={theme.colors.accent} />
-              <Text style={styles.moduleText}>Módulo 3: Carga de menú de servicios y precios de estética (20 min)</Text>
+              <Text style={styles.moduleText}>
+                Módulo 3: Carga de menú de servicios y precios de estética (20 min)
+              </Text>
             </View>
             <View style={styles.moduleItem}>
               <CheckCircle size={16} color={theme.colors.accent} />
-              <Text style={styles.moduleText}>Módulo 4: Pruebas en vivo y políticas de cancelación con seña (15 min)</Text>
+              <Text style={styles.moduleText}>
+                Módulo 4: Pruebas en vivo y políticas de cancelación con seña (15 min)
+              </Text>
             </View>
           </View>
         </View>
@@ -218,6 +357,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontDisplay,
     marginTop: theme.spacing[3],
     marginBottom: theme.spacing[2],
+    textAlign: 'center',
   },
   mainTitleMobile: {
     fontSize: theme.typography.size['2xl'],
@@ -226,6 +366,144 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.size.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  subtitleBold: {
+    fontWeight: theme.typography.weight.bold,
+    color: theme.colors.textPrimary,
+  },
+  saasBannerCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing[8],
+    marginBottom: theme.spacing[6],
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    gap: 20,
+  },
+  saasBannerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    flexWrap: 'wrap',
+  },
+  saasIconWrapper: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: theme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saasHeaderInfo: {
+    flex: 1,
+    minWidth: 260,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  deliverablePill: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+  },
+  deliverablePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6EE7B7',
+    letterSpacing: 0.4,
+  },
+  deliverablePillIndigo: {
+    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+    borderWidth: 1,
+    borderColor: '#818CF8',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+  },
+  deliverablePillIndigoText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#C7D2FE',
+    letterSpacing: 0.4,
+  },
+  saasBannerTitle: {
+    fontSize: theme.typography.size.xl,
+    fontWeight: theme.typography.weight.bold,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  saasBannerDesc: {
+    fontSize: theme.typography.size.xs,
+    color: '#CBD5E1',
+    lineHeight: 18,
+  },
+  saasAccessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: theme.radius.lg,
+  },
+  saasAccessButtonText: {
+    color: '#FFFFFF',
+    fontWeight: theme.typography.weight.bold,
+    fontSize: theme.typography.size.sm,
+  },
+  saasCredentialsGrid: {
+    flexDirection: 'row',
+    gap: 14,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  saasCredentialsGridMobile: {
+    flexDirection: 'column',
+  },
+  credBoxItem: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: theme.radius.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 4,
+  },
+  credBoxLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 0.4,
+  },
+  credBoxUrl: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#34D399',
+  },
+  credBoxValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  passwordTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  passwordTagText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#065F46',
   },
   masterDownloadCard: {
     backgroundColor: theme.colors.surfaceDark,
@@ -243,7 +521,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     justifyContent: 'space-between',
-    ...theme.shadows.md,
+    ...theme.shadows.card,
   },
   deliverableHeader: {
     flexDirection: 'row',
