@@ -29,7 +29,7 @@ export interface AppEnv {
 const DEFAULT_PRODUCTION_DASHBOARD_URL = 'https://turnoflow-product-clientturnoflow-p.vercel.app';
 const DEFAULT_PRODUCTION_API_URL =
   process.env.EXPO_PUBLIC_PRODUCTION_API_URL ||
-  'https://backend-production-c7cf.up.railway.app';
+  'https://turnoflowapi-production.up.railway.app';
 
 function normalizeBaseUrl(url: string): string {
   return url.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
