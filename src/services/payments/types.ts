@@ -8,6 +8,12 @@ export interface OrderItem {
   price: number;
 }
 
+export interface SaasCredentials {
+  email: string;
+  temporaryPassword: string;
+  dashboardUrl: string;
+}
+
 export interface OrderRecord {
   orderId: string;
   customerEmail: string;
@@ -20,6 +26,7 @@ export interface OrderRecord {
   verificationToken: string;
   gateway: PaymentGatewayId;
   gatewayTransactionId?: string;
+  saasCredentials?: SaasCredentials;
   createdAt: string;
   verifiedAt?: string;
 }

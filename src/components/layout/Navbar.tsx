@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Linking, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { Sparkles, Menu, X, ArrowRight } from 'lucide-react-native';
+import { Sparkles, Menu, X, ArrowRight, ExternalLink } from 'lucide-react-native';
 import { theme } from '../../styles/theme';
 import { siteConfig } from '../../config/site';
+import { clientEnv } from '../../config/env';
 import { Container } from './Container';
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= 960;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -22,6 +23,16 @@ export const Navbar: React.FC = () => {
   const handleNavigate = (path: string) => {
     setMobileMenuOpen(false);
     router.push(path as any);
+  };
+
+  const handleOpenDashboard = () => {
+    setMobileMenuOpen(false);
+    const loginUrl = `${clientEnv.dashboardUrl}/login`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(loginUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      Linking.openURL(loginUrl);
+    }
   };
 
   return (
@@ -69,14 +80,24 @@ export const Navbar: React.FC = () => {
           {/* CTA & Mobile Toggle */}
           <View style={styles.actions}>
             {isDesktop ? (
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => handleNavigate('/checkout')}
-                style={styles.ctaButton}
-              >
-                <Text style={styles.ctaButtonText}>Comenzar ahora</Text>
-                <ArrowRight size={15} color="#FFFFFF" />
-              </TouchableOpacity>
+              <View style={styles.desktopCtaGroup}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleOpenDashboard}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={styles.secondaryButtonText}>Acceso Clientes / Panel</Text>
+                  <ExternalLink size={14} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => handleNavigate('/checkout')}
+                  style={styles.ctaButton}
+                >
+                  <Text style={styles.ctaButtonText}>Quiero automatizar mi negocio</Text>
+                  <ArrowRight size={15} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
             ) : (
               <TouchableOpacity
                 activeOpacity={0.7}
@@ -101,6 +122,13 @@ export const Navbar: React.FC = () => {
                 <Text style={styles.mobileMenuText}>{link.label}</Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              onPress={handleOpenDashboard}
+              style={styles.mobileSecondaryButton}
+            >
+              <Text style={styles.mobileSecondaryText}>Acceso Clientes / Panel</Text>
+              <ExternalLink size={15} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleNavigate('/checkout')}
               style={styles.mobileCtaButton}
@@ -197,6 +225,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  desktopCtaGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: theme.radius.md,
+    gap: 6,
+  },
+  secondaryButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.size.xs,
+    fontWeight: theme.typography.weight.semibold,
+    fontFamily: theme.typography.fontDisplay,
+  },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -229,12 +279,29 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: theme.typography.weight.medium,
   },
+  mobileSecondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    marginTop: 4,
+  },
+  mobileSecondaryText: {
+    color: theme.colors.textPrimary,
+    fontWeight: theme.typography.weight.semibold,
+    fontSize: theme.typography.size.sm,
+  },
   mobileCtaButton: {
     backgroundColor: theme.colors.accent,
     paddingVertical: 14,
     borderRadius: theme.radius.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   mobileCtaText: {
     color: '#FFFFFF',

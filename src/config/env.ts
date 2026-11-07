@@ -9,6 +9,7 @@ export interface AppEnv {
   appName: string;
   appUrl: string;
   apiUrl: string;
+  dashboardUrl: string;
   isProduction: boolean;
 
   // AI Configuration
@@ -25,12 +26,56 @@ export interface AppEnv {
   googleAnalyticsId?: string;
 }
 
+const DEFAULT_PRODUCTION_DASHBOARD_URL = 'https://turnoflow-product-clientturnoflow-p.vercel.app';
+const DEFAULT_PRODUCTION_API_URL =
+  process.env.EXPO_PUBLIC_PRODUCTION_API_URL ||
+  'https://backend-production-c7cf.up.railway.app';
+
+function normalizeBaseUrl(url: string): string {
+  return url.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
+}
+
+function isProductionBrowserHost(): boolean {
+  if (typeof window === 'undefined' || !window.location?.hostname) {
+    return false;
+  }
+  const host = window.location.hostname;
+  return host !== 'localhost' && host !== '127.0.0.1';
+}
+
+function resolveApiUrl(): string {
+  const rawEnvUrl = process.env.EXPO_PUBLIC_API_URL || '';
+  const configured = normalizeBaseUrl(rawEnvUrl);
+
+  if (isProductionBrowserHost()) {
+    // En navegador sobre un dominio productivo (*.vercel.app o distinto de localhost),
+    // si la variable no está definida o apunta a localhost, usar la URL productiva del backend
+    if (!configured || configured.includes('localhost') || configured.includes('127.0.0.1')) {
+      return normalizeBaseUrl(DEFAULT_PRODUCTION_API_URL);
+    }
+    return configured;
+  }
+
+  return configured || 'http://localhost:3000';
+}
+
+function resolveDashboardUrl(): string {
+  const configured = (process.env.EXPO_PUBLIC_DASHBOARD_URL || '').trim().replace(/\/+$/, '');
+  if (isProductionBrowserHost()) {
+    if (!configured || configured.includes('localhost') || configured.includes('127.0.0.1')) {
+      return DEFAULT_PRODUCTION_DASHBOARD_URL;
+    }
+  }
+  return configured || DEFAULT_PRODUCTION_DASHBOARD_URL;
+}
+
 // Client-safe configuration read from EXPO_PUBLIC_*
 export const clientEnv: AppEnv = {
   appName: 'TurnoFlow AI',
   appUrl: process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081',
-  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
-  isProduction: process.env.NODE_ENV === 'production',
+  apiUrl: resolveApiUrl(),
+  dashboardUrl: resolveDashboardUrl(),
+  isProduction: process.env.NODE_ENV === 'production' || isProductionBrowserHost(),
 
   aiProvider: (process.env.EXPO_PUBLIC_AI_PROVIDER as 'anthropic' | 'openai' | 'mock') || 'mock',
   aiModel: process.env.EXPO_PUBLIC_AI_MODEL || 'claude-3-5-sonnet-20241022',

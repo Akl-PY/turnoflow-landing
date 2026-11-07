@@ -83,10 +83,12 @@ export default function CheckoutPage() {
 
       const provider = paymentRegistry.getProvider(paymentGateway);
       const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081';
+      const emailParam = encodeURIComponent(orderSession.saasCredentials.email);
+      const thankYouPath = `/thank-you?token=${orderSession.downloadToken}&email=${emailParam}`;
 
       if (paymentGateway === 'sandbox') {
-        // Redirige directamente a la confirmación verificada con el token oficial
-        router.push(`/thank-you?token=${orderSession.downloadToken}` as any);
+        // Redirige directamente a la confirmación verificada con el token oficial y credenciales SaaS
+        router.push(thankYouPath as any);
       } else {
         const session = await provider.createCheckoutSession({
           customerName,
@@ -94,14 +96,14 @@ export default function CheckoutPage() {
           customerPhone,
           planId: siteConfig.pricing.mainProduct.id,
           includeUpsell,
-          successUrl: `${hostUrl}/thank-you?token=${orderSession.downloadToken}`,
+          successUrl: `${hostUrl}${thankYouPath}`,
           cancelUrl: `${hostUrl}/checkout`,
         });
 
         if (typeof window !== 'undefined' && session.checkoutUrl.startsWith('http')) {
           window.location.href = session.checkoutUrl;
         } else {
-          router.push(`/thank-you?token=${orderSession.downloadToken}` as any);
+          router.push(thankYouPath as any);
         }
       }
     } catch (err: any) {
@@ -234,7 +236,9 @@ export default function CheckoutPage() {
               <View style={styles.summaryItem}>
                 <View style={styles.summaryItemInfo}>
                   <Text style={styles.summaryItemName}>{siteConfig.pricing.mainProduct.name}</Text>
-                  <Text style={styles.summaryItemTag}>Licencia Vitalicia Oficial</Text>
+                  <Text style={styles.summaryItemTag}>
+                    Entrega Dual: Acceso Panel Cloud SaaS + Kit Descargable (.ZIP)
+                  </Text>
                 </View>
                 <Text style={styles.summaryItemPrice}>${mainPrice} USD</Text>
               </View>

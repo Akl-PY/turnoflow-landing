@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
-import { OrderRecord, OrderStatus, WebhookVerificationResult } from './types';
+import { OrderRecord, OrderStatus, SaasCredentials, WebhookVerificationResult } from './types';
 import { siteConfig } from '../../config/site';
+import { clientEnv } from '../../config/env';
 
 const ORDERS_KEY = 'turnoflow_orders_store';
 const PROCESSED_WEBHOOKS_KEY = 'turnoflow_processed_webhooks';
@@ -79,10 +80,11 @@ class PaymentVerificationService {
 
     const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
 
+    const normalizedEmail = params.customerEmail.toLowerCase().trim();
     const order: OrderRecord = {
       orderId,
       customerName: params.customerName,
-      customerEmail: params.customerEmail.toLowerCase().trim(),
+      customerEmail: normalizedEmail,
       customerPhone: params.customerPhone,
       totalAmount,
       currency: 'USD',
@@ -90,6 +92,11 @@ class PaymentVerificationService {
       status: 'pending',
       verificationToken,
       gateway: params.gateway,
+      saasCredentials: {
+        email: normalizedEmail,
+        temporaryPassword: 'TurnoFlow2026!',
+        dashboardUrl: `${clientEnv.dashboardUrl}/login`,
+      },
       createdAt: new Date().toISOString(),
     };
 
@@ -98,6 +105,67 @@ class PaymentVerificationService {
     this.persist();
 
     return { order, verificationToken };
+  }
+
+  /**
+   * Sincroniza o inserta una orden verificada proveniente del backend API
+   */
+  public upsertVerifiedOrder(params: {
+    orderId: string;
+    verificationToken: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    includeUpsell?: boolean;
+    totalAmount?: number;
+    currency?: string;
+    gateway?: any;
+    saasCredentials?: SaasCredentials;
+  }): OrderRecord {
+    const items = [
+      {
+        id: siteConfig.pricing.mainProduct.id,
+        name: siteConfig.pricing.mainProduct.name,
+        price: siteConfig.pricing.mainProduct.launchPrice,
+      },
+    ];
+
+    if (params.includeUpsell) {
+      items.push({
+        id: siteConfig.pricing.upsell.id,
+        name: siteConfig.pricing.upsell.name,
+        price: siteConfig.pricing.upsell.price,
+      });
+    }
+
+    const computedAmount = params.totalAmount ?? items.reduce((sum, item) => sum + item.price, 0);
+    const normalizedEmail = params.customerEmail.toLowerCase().trim();
+
+    const record: OrderRecord = {
+      orderId: params.orderId,
+      customerName: params.customerName.trim() || 'Cliente TurnoFlow',
+      customerEmail: normalizedEmail,
+      customerPhone: params.customerPhone,
+      totalAmount: computedAmount,
+      currency: params.currency || 'USD',
+      items,
+      status: 'verified',
+      verificationToken: params.verificationToken,
+      gateway: params.gateway || 'sandbox',
+      gatewayTransactionId: params.verificationToken,
+      saasCredentials: params.saasCredentials || {
+        email: normalizedEmail,
+        temporaryPassword: 'TurnoFlow2026!',
+        dashboardUrl: `${clientEnv.dashboardUrl}/login`,
+      },
+      createdAt: new Date().toISOString(),
+      verifiedAt: new Date().toISOString(),
+    };
+
+    this.orders.set(record.orderId, record);
+    this.tokenToOrderId.set(record.verificationToken, record.orderId);
+    this.persist();
+    return record;
   }
 
   /**

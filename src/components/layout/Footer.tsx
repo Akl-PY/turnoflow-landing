@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Sparkles, Shield, Clock, MessageSquare, ExternalLink } from 'lucide-react-native';
+import { Sparkles, Shield, ExternalLink } from 'lucide-react-native';
 import { theme } from '../../styles/theme';
 import { siteConfig } from '../../config/site';
+import { clientEnv } from '../../config/env';
 import { Container } from './Container';
 
 export const Footer: React.FC = () => {
@@ -13,6 +14,15 @@ export const Footer: React.FC = () => {
 
   const handleNavigate = (path: string) => {
     router.push(path as any);
+  };
+
+  const handleOpenDashboard = () => {
+    const loginUrl = `${clientEnv.dashboardUrl}/login`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(loginUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      Linking.openURL(loginUrl);
+    }
   };
 
   return (
@@ -50,6 +60,10 @@ export const Footer: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleNavigate('/checkout')} style={styles.linkItem}>
               <Text style={styles.linkText}>Adquirir Licencia ($49)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleOpenDashboard} style={styles.externalLinkItem}>
+              <Text style={styles.externalLinkText}>Panel de Control (Clientes)</Text>
+              <ExternalLink size={13} color={theme.colors.accent} />
             </TouchableOpacity>
           </View>
 
@@ -158,6 +172,18 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: theme.typography.size.sm,
     color: theme.colors.textLight,
+    fontFamily: theme.typography.fontDisplay,
+  },
+  externalLinkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: theme.spacing[3],
+  },
+  externalLinkText: {
+    fontSize: theme.typography.size.sm,
+    color: theme.colors.accent,
+    fontWeight: theme.typography.weight.semibold,
     fontFamily: theme.typography.fontDisplay,
   },
   contactEmail: {
