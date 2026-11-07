@@ -1,41 +1,70 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# TURNOfLOW AI — AGENTS & MULTI-AGENT DEVELOPMENT ARCHITECTURE
 
-## Expo has changed — do not trust your training data
+Este documento define la arquitectura, normas operativas y especialización de agentes de IA para el desarrollo y mantenimiento continuo de **TurnoFlow AI — Landing & Sales Funnel** dentro de `/landing`.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+---
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+## 1. EQUIPO DE AGENTES DE DESARROLLO
 
-## Commands
+Los agentes de desarrollo colaboran de forma modular para expandir y perfeccionar el funnel comercial:
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+### 1.1 UI/UX Agent
+- **Rol:** Diseñador y desarrollador de interfaces visuales de alta fidelidad.
+- **Responsabilidades:**
+  - Preservar el lenguaje visual minimalista y premium inspirado en Stripe, Linear y Framer.
+  - Diseñar componentes reutilizables con soporte web nativo y adaptable a iOS/Android.
+  - Asegurar tipografía clara, espaciado generoso, paleta coherente (`src/styles/theme.ts`) y jerarquía visual.
+  - Validar responsiveness en resoluciones mobile (< 768px), tablet y desktop.
 
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
+### 1.2 CRO & Copy Agent (Conversion Rate Optimization)
+- **Rol:** Especialista en psicología de compra, respuesta directa y optimización de conversión.
+- **Responsabilidades:**
+  - Optimizar llamadas a la acción (CTAs), encabezados y microcopias comerciales.
+  - Mejorar el lead magnet (`/free-guide`) y el ratio de conversión visitante-a-lead.
+  - Reducir fricción en la página de checkout (`/checkout`) y optimizar el ticket medio con el upsell ($249 USD).
+  - Prevenir afirmaciones falsas, estadísticas no fundamentadas o testimonios ficticios.
 
-Run lint and typecheck before declaring any task done.
+### 1.3 AI Integration Agent
+- **Rol:** Arquitecto de integraciones de modelos de lenguaje e inferencia.
+- **Responsabilidades:**
+  - Mantener la abstracción multi-proveedor en `src/services/ai/` (Anthropic Claude, OpenAI, Mock).
+  - Implementar streaming, control estricto de tokens, límites de tasa y sanitización anti-prompt-injection.
+  - Garantizar que las claves API secretas permanezcan en el servidor y nunca se expongan en el cliente móvil/web.
+  - Mantener actualizadas las 8 herramientas comerciales estructuradas del `TurnoFlow Sales Assistant`.
 
-## Navigation & Routing
+### 1.4 QA & Compliance Agent
+- **Rol:** Ingeniero de calidad, pruebas y cumplimiento normativo.
+- **Responsabilidades:**
+  - Ejecutar verificación de tipos TypeScript (`npx tsc --noEmit`) y pruebas unitarias/E2E.
+  - Validar que las rutas del funnel (`/`, `/free-guide`, `/sales`, `/checkout`, `/thank-you`, `/download`, `/privacy`, `/terms`) funcionen sin enlaces rotos ni desbordamientos visuales.
+  - Verificar que ninguna página protegida (`/thank-you`, `/download`) sea accesible sin un token verificado legítimo.
+  - Comprobar que el banner de cookies y consentimiento respete la privacidad del visitante.
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+---
 
-## Building with EAS
+## 2. REGLAS ARQUITECTURALES DEL PROYECTO
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
+1. **Ubicación Exclusiva:** Todo el código del funnel reside exclusivamente dentro de `/landing`. No modificar `/product` ni rutas ajenas.
+2. **Framework:** Expo SDK 58 + Expo Router (enrutamiento basado en archivos dentro de `app/`). No convertir a proyectos Vite o Next.js aislados.
+3. **TypeScript Estricto:** Tipado riguroso, interfaces explícitas para modelos, proveedores y respuestas de API.
+4. **Separación de Responsabilidades:**
+   - `app/`: Enrutamiento y vistas principales del funnel.
+   - `src/components/landing/`: Secciones de la landing principal y páginas de venta.
+   - `src/components/ai-agent/`: Componentes del asistente de ventas flotante.
+   - `src/components/ui/`: Componentes atómicos (Button, Input, Card, Badge, Accordion).
+   - `src/services/ai/`: Proveedores, registro y ejecución de herramientas de IA.
+   - `src/services/payments/`: Abstracción de pasarelas de pago y verificación por tokens.
+   - `src/services/leads/`: Almacenamiento, deduplicación y captación de leads.
+   - `src/services/analytics/`: Despacho de eventos (Pixel, GA4, locales) con consentimiento.
+   - `src/validations/`: Esquemas de validación Zod.
+   - `src/config/`: Constantes de oferta, precios, preguntas frecuentes y entorno.
 
-## Rules
+---
 
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+## 3. CONVENCIONES DE CÓDIGO
+
+- **Nomenclatura:** PascalCase para componentes (`HeroSection.tsx`), camelCase para utilidades y servicios (`leadStorageService.ts`).
+- **Validaciones:** Toda entrada de usuario (leads, checkout, consultas) debe validarse con esquemas Zod en `src/validations/schemas.ts`.
+- **Estilos:** Utilizar `StyleSheet.create` de React Native referenciando tokens desde `src/styles/theme.ts`.
+- **Textos en Español:** Español neutro o rioplatense natural, empático y comercial ("Dejá de perder clientes...", "Implementá un sistema...").
+- **Manejo de Errores:** Errores controlados con retroalimentación visual al usuario en lugar de alertas genéricas.
