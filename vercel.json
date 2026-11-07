@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "EXPO_PUBLIC_API_URL=https://turnoflowapi-production.up.railway.app/api npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
