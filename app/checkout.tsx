@@ -90,6 +90,14 @@ export default function CheckoutPage() {
         // Redirige directamente a la confirmación verificada con el token oficial y credenciales SaaS
         router.push(thankYouPath as any);
       } else {
+        // Si el backend ya devolvió la URL de Checkout oficial (Stripe o Mercado Pago):
+        if (orderSession.redirectUrl && orderSession.redirectUrl.startsWith('http')) {
+          if (typeof window !== 'undefined') {
+            window.location.href = orderSession.redirectUrl;
+            return;
+          }
+        }
+
         const session = await provider.createCheckoutSession({
           customerName,
           customerEmail,
