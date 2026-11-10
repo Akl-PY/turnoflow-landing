@@ -139,32 +139,32 @@ export default function DownloadPage() {
     icon: React.ReactNode;
   }[] = [
     {
-      assetKey: 'blueprints',
-      title: 'Paquete Completo de Flujos JSON (Blueprints n8n)',
-      desc: 'Flujos de atención 24/7, calificación de clientas y confirmación de turnos en Google Calendar.',
-      size: '1.4 MB • JSON / n8n Workflow',
-      icon: <FileCode size={22} color={theme.colors.accent} />,
-    },
-    {
       assetKey: 'manual',
-      title: 'Manual de WhatsApp Cloud API Oficial',
-      desc: 'Guía paso a paso para configurar tu número oficial en Meta sin intermediarios.',
-      size: '3.8 MB • Guía Técnica',
+      title: 'Manual Ilustrado de TurnoFlow AI (Visual / PDF)',
+      desc: 'Guía paso a paso con capturas de pantalla para vincular WhatsApp por QR, cargar precios y recibir alertas.',
+      size: '2.5 MB • PDF / Imprimible',
       icon: <BookOpen size={22} color={theme.colors.accent} />,
     },
     {
+      assetKey: 'matrix',
+      title: 'Plantilla de Servicios, Tarifas y Duración de Turnos',
+      desc: 'Planilla Excel lista para completar con los tratamientos, tiempos de atención y preguntas frecuentes.',
+      size: '850 KB • Excel / CSV',
+      icon: <Table size={22} color={theme.colors.accent} />,
+    },
+    {
       assetKey: 'prompts',
-      title: 'System Prompts de los 5 Agentes IA',
-      desc: 'Prompts blindados para Recepcionista, Reservas, Clasificador, Seguimiento y Supervisor.',
-      size: '420 KB • Markdown (.md)',
+      title: 'Protocolo de Atención & Guiones para WhatsApp',
+      desc: 'Estructura de mensajes cálidos para bienvenida, cotizaciones, confirmaciones y avisos al dueño.',
+      size: '420 KB • Documento Guía',
       icon: <Sparkles size={22} color={theme.colors.accent} />,
     },
     {
-      assetKey: 'matrix',
-      title: 'Matriz de Seguimiento y 15 Respuestas Comerciales',
-      desc: 'Plantilla de control de clientas interesadas, guiones y cálculo de conversión.',
-      size: '850 KB • CSV / Excel',
-      icon: <Table size={22} color={theme.colors.accent} />,
+      assetKey: 'blueprints',
+      title: 'Motor de Automatizaciones & Recordatorios',
+      desc: 'Reglas inteligentes para recordatorio de turnos 24 hs antes, detección de clientas y seguimiento.',
+      size: '1.4 MB • Paquete Digital',
+      icon: <FileCode size={22} color={theme.colors.accent} />,
     },
   ];
 
